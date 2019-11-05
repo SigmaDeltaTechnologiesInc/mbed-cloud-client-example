@@ -19,7 +19,7 @@
             "client_app.startup_max_random_delay"       : 200,
             "nanostack-hal.event_loop_thread_stack_size": 8192,
             "update-client.storage-locations"           : 1,
-            "mbed-trace.enable"                         : null,
+            "mbed-trace.enable"                         : 1,
             "mbed-mesh-api.wisun-bc-interval"           : "1000",
             "mbed-mesh-api.wisun-bc-dwell-interval"     : "200",
             "mbed-mesh-api.wisun-uc-dwell-interval"     : "150",
