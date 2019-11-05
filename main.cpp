@@ -27,6 +27,11 @@
 #include "certificate_enrollment_user_cb.h"
 #endif
 
+#include "LCD_DISCO_F429ZI.h"
+
+LCD_DISCO_F429ZI lcd;
+
+
 #if defined(MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS) && \
  (MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS == 1) && \
  defined(MBED_CONF_EVENTS_SHARED_DISPATCH_FROM_APPLICATION) && \
@@ -52,7 +57,7 @@ int main(void)
 }
 
 // Pointers to the resources that will be created in main_application().
-static M2MResource* button_res;
+static M2MResource* tag_res;
 static M2MResource* pattern_res;
 static M2MResource* blink_res;
 static M2MResource* unregister_res;
@@ -62,6 +67,27 @@ void unregister(void);
 
 // Pointer to mbedClient, used for calling close function.
 static SimpleM2MClient *client;
+
+// mirika 
+void LCD_Init(void)
+{
+	printf("LCD Init\n");
+
+	lcd.Clear(LCD_COLOR_WHITE);
+    lcd.SetBackColor(LCD_COLOR_WHITE);
+    lcd.SetTextColor(LCD_COLOR_BLACK);
+  
+    BSP_LCD_SetFont(&Font24);
+    lcd.DisplayStringAt(0, LINE(0), (uint8_t *)"No: 17338", LEFT_MODE);
+
+    BSP_LCD_SetFont(&Font20);
+    lcd.DisplayStringAt(0, LINE(2), (uint8_t *)"Date:", LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(3), (uint8_t *)"    2019/07/17", LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(4), (uint8_t *)"Facility:", LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"    Shibuya", LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(6), (uint8_t *)"Proceeded By:", LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(7), (uint8_t *)"    Tanaka, Jiro", LEFT_MODE);
+}
 
 void pattern_updated(const char *)
 {
@@ -179,6 +205,8 @@ void main_application(void)
     print_m2mobject_stats();
 #endif
 
+	LCD_Init();
+
     // SimpleClient is used for registering and unregistering resources to a server.
     SimpleM2MClient mbedClient;
 
@@ -228,10 +256,9 @@ void main_application(void)
 
 #ifndef MCC_MEMORY
     // Create resource for button count. Path of this resource will be: 3200/0/5501.
-    button_res = mbedClient.add_cloud_resource(3200, 0, 5501, "button_resource", M2MResourceInstance::INTEGER,
+    tag_res = mbedClient.add_cloud_resource(3200, 0, 5501, "tag_status_resource", M2MResourceInstance::STRING,
                               M2MBase::GET_ALLOWED, 0, true, NULL, (void*)notification_status_callback);
-    button_res->set_value(0);
-
+   
     // Create resource for led blinking pattern. Path of this resource will be: 3201/0/5853.
     pattern_res = mbedClient.add_cloud_resource(3201, 0, 5853, "pattern_resource", M2MResourceInstance::STRING,
                                M2MBase::GET_PUT_ALLOWED, "500:500:500:500", true, (void*)pattern_updated, (void*)notification_status_callback);
@@ -263,7 +290,7 @@ void main_application(void)
     mbedClient.register_and_connect();
 
 #ifndef MCC_MINIMAL
-    blinky.init(mbedClient, button_res);
+    blinky.init(mbedClient, tag_res);
     blinky.request_next_loop_event();
 #endif
 

@@ -51,25 +51,26 @@ static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_OFF);
 #endif
 
 #if PLATFORM_ENABLE_BUTTON
-static InterruptIn button(MBED_CONF_APP_BUTTON_PINNAME);
+static InterruptIn button(PG_2,PullUp);
 static bool button_pressed = false;
+static int	button_status = 0;
 static void button_press(void);
 
 static void button_press(void)
 {
-    button_pressed = true;
+   // button_pressed = true;
+   button_status = 0;
+}
+
+static void button_rise(void)
+{
+	button_status =1;
 }
 #endif
 
-uint8_t mcc_platform_button_clicked(void)
+uint8_t mcc_platform_button_status(void)
 {
-#if PLATFORM_ENABLE_BUTTON
-    if (button_pressed) {
-        button_pressed = false;
-        return true;
-    }
-#endif
-    return false;
+	return button_status;
 }
 
 uint8_t mcc_platform_init_button_and_led(void)
@@ -77,6 +78,7 @@ uint8_t mcc_platform_init_button_and_led(void)
 #if PLATFORM_ENABLE_BUTTON
    if(MBED_CONF_APP_BUTTON_PINNAME != NC) {
         button.fall(&button_press);
+		button.rise(&button_rise);
     }
 #endif
     return 0;

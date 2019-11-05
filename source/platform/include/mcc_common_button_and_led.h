@@ -36,7 +36,7 @@ void mcc_platform_toggle_led(void);
 void mcc_platform_led_off(void);
 
 // Check if button has been pressed (if available)
-uint8_t mcc_platform_button_clicked(void);
+uint8_t mcc_platform_button_status(void);
 
 uint8_t mcc_platform_init_button_and_led(void);
 

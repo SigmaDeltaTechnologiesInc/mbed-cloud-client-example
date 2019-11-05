@@ -42,6 +42,8 @@
 
 int8_t Blinky::_tasklet = -1;
 
+const char CONST_TAG_LOCK[]="TAG_LOCKED";
+const char CONST_TAG_UNLOCK[]="TAG_UNLOCKED";
 extern "C" {
 
 static void blinky_event_handler_wrapper(arm_event_s *event)
@@ -62,11 +64,12 @@ Blinky::Blinky()
 : _pattern(NULL),
   _curr_pattern(NULL),
   _client(NULL),
-  _button_resource(NULL),
+  _tag_resource(NULL),
   _state(STATE_IDLE),
   _restart(false)
 {
-    _button_count = 0;
+    _tag_status = 0;
+	_pre_tag_status=0;
 }
 
 Blinky::~Blinky()
@@ -92,7 +95,7 @@ void Blinky::init(SimpleM2MClient &client, M2MResource *resource)
     }
 
     _client = &client;
-    _button_resource = resource;
+    _tag_resource = resource;
 
     // create the tasklet, if not done already
     create_tasklet();
@@ -187,7 +190,7 @@ void Blinky::event_handler(const arm_event_s &event)
             handle_pattern_event();
             break;
         case BLINKY_TASKLET_LOOP_TIMER:
-            handle_buttons();
+            handle_tag_status();
             break;
         case BLINKY_TASKLET_PATTERN_INIT_EVENT:
         default:
@@ -233,18 +236,42 @@ bool Blinky::request_timed_event(uint8_t event_type, arm_library_event_priority_
     }
 }
 
-void Blinky::handle_buttons()
+//void Blinky::handle_buttons()
+//{
+//    assert(_client);
+//    assert(_button_resource);
+//
+//    // this might be stopped now, but the loop should then be restarted after re-registration
+//    request_next_loop_event();
+//
+//    if (_client->is_register_called()) {
+//        if (mcc_platform_button_clicked()) {
+//            _button_resource->set_value(++_button_count);
+//            printf("Button resource updated. Value %d\n", _button_count);
+//        }
+//    }
+//}
+
+void Blinky::handle_tag_status(void)
 {
-    assert(_client);
-    assert(_button_resource);
+	assert(_client);
+	assert(_tag_resource);
 
     // this might be stopped now, but the loop should then be restarted after re-registration
     request_next_loop_event();
 
     if (_client->is_register_called()) {
-        if (mcc_platform_button_clicked()) {
-            _button_resource->set_value(++_button_count);
-            printf("Button resource updated. Value %d\n", _button_count);
+		_tag_status = mcc_platform_button_status();
+    	if (_pre_tag_status == _tag_status ) return;
+		_pre_tag_status = _tag_status;
+        if ( _tag_status == 1  ) {
+            _tag_resource->set_value((const uint8_t*)CONST_TAG_LOCK,sizeof(CONST_TAG_LOCK));
+            printf("Tag status to Locked\n");
         }
+		else
+		{
+			_tag_resource->set_value((const uint8_t*)CONST_TAG_UNLOCK,sizeof(CONST_TAG_UNLOCK));
+            printf("Tag status to Locked\n");
+		}
     }
 }
