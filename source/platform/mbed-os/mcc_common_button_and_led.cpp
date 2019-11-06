@@ -25,12 +25,12 @@
 #include "mcc_common_button_and_led.h"
 #include <stdint.h>
 
-#if PLATFORM_ENABLE_BUTTON
+
 // Make button and led definitions optional
-#ifndef MBED_CONF_APP_BUTTON_PINNAME
-#define MBED_CONF_APP_BUTTON_PINNAME NC
+#ifndef MBED_CONF_APP_TAG_PORT
+#define MBED_CONF_APP_TAG_PORT NC
 #endif
-#endif
+
 
 #if PLATFORM_ENABLE_LED
 // Define led on/off
@@ -50,37 +50,19 @@
 static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_OFF);
 #endif
 
-#if PLATFORM_ENABLE_BUTTON
-static InterruptIn button(PG_2,PullUp);
-static bool button_pressed = false;
-static int	button_status = 0;
-static void button_press(void);
 
-static void button_press(void)
-{
-   // button_pressed = true;
-   button_status = 0;
-}
+static DigitalIn tag(MBED_CONF_APP_TAG_PORT,PullUp);
+static int	tag_status = 0;
 
-static void button_rise(void)
-{
-	button_status =1;
-}
-#endif
 
 uint8_t mcc_platform_button_status(void)
 {
-	return button_status;
+	return ( tag == 0 ) ? 0:1;
 }
 
 uint8_t mcc_platform_init_button_and_led(void)
 {
-#if PLATFORM_ENABLE_BUTTON
-   if(MBED_CONF_APP_BUTTON_PINNAME != NC) {
-        button.fall(&button_press);
-		button.rise(&button_rise);
-    }
-#endif
+
     return 0;
 }
 

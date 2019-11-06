@@ -259,19 +259,19 @@ void Blinky::handle_tag_status(void)
 
     // this might be stopped now, but the loop should then be restarted after re-registration
     request_next_loop_event();
-
+	mcc_platform_toggle_led();
     if (_client->is_register_called()) {
 		_tag_status = mcc_platform_button_status();
     	if (_pre_tag_status == _tag_status ) return;
 		_pre_tag_status = _tag_status;
-        if ( _tag_status == 1  ) {
+        if ( _tag_status == 0  ) {
             _tag_resource->set_value((const uint8_t*)CONST_TAG_LOCK,sizeof(CONST_TAG_LOCK));
             printf("Tag status to Locked\n");
         }
 		else
 		{
 			_tag_resource->set_value((const uint8_t*)CONST_TAG_UNLOCK,sizeof(CONST_TAG_UNLOCK));
-            printf("Tag status to Locked\n");
+            printf("Tag status to unLocked\n");
 		}
     }
 }
