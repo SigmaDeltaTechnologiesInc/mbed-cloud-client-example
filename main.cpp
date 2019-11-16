@@ -28,6 +28,33 @@
 #endif
 
 #include "LCD_DISCO_F429ZI.h"
+#include "Images/qr_code.h"
+
+
+
+
+typedef struct tagBITMAP {
+	uint16_t  type;                 /* Magic identifier            */					// 0~1
+   	uint32_t  size;                       /* File size in bytes          */				// 2 3 4 5
+   	uint16_t  reserved1;																// 6 7
+	uint16_t  reserved2;																// 8 9 
+   	uint32_t  offset;            /* Offset to image data, bytes */						// 10 11 12 13 
+    uint32_t  header_size;              /* Header size in bytes      */					// 14 15 16 17 
+   	int32_t   width;						/* Width  of image */						// 18 19 20 21	
+	int32_t   height;                		/* height of image */						// 22 23 24 25
+   	uint16_t  planes;      /* Number of colour planes   */								// 26 27
+   	uint16_t  bits;        /* Bits per pixel            */								// 28 29
+   	uint32_t  compression;       /* Compression type          */						// 30 31 32 33 
+   	uint32_t  imagesize;         /* Image size in bytes       */						// 34 35 36 37 
+   	int32_t   xresolution;				/* Pixels per meter          */					// 38 39 40 41
+	int32_t   yresolution;     			/* Pixels per meter          */					// 42 43 44 45
+   	uint32_t  ncolours;          /* Number of colours         */						// 46 47 48 49
+   	uint32_t  importantcolours;  /* Important colours         */						// 50 51 52 53 
+} BITMAP;
+
+
+BITMAP bitMap;
+
 
 LCD_DISCO_F429ZI lcd;
 
@@ -68,6 +95,103 @@ void unregister(void);
 // Pointer to mbedClient, used for calling close function.
 static SimpleM2MClient *client;
 
+typedef uint8_t* LCD_BMP_DATA;
+
+static LCD_BMP_DATA gBMPData=NULL;
+
+static uint8_t BMP_DATA[31000];
+
+typedef union _UINT32_DATA
+{
+	uint8_t		b[4];
+	uint32_t 	v;
+}UINT32_DATA;
+
+typedef union _UINT16_DATA
+{
+	uint8_t 	b[2];
+	uint16_t 	v;
+}UINT16_DATA;
+
+uint32_t swap_32( uint32_t value )
+{
+	UINT32_DATA ret;
+	UINT32_DATA temp;
+	temp.v=value;
+
+	ret.b[0]=temp.b[3];
+	ret.b[1]=temp.b[2];
+	ret.b[2]=temp.b[1];
+	ret.b[3]=temp.b[0];
+	
+	return ret.v;
+}
+
+uint16_t swap_16( uint16_t value)
+{
+	UINT16_DATA ret;
+	UINT16_DATA temp;
+
+	temp.v=value;
+
+	ret.b[0] = temp.b[1];
+	ret.b[1] = temp.b[0];
+
+	return ret.v;
+}
+/*
+typedef struct tagBITMAP {
+	uint16_t  type;             				// 0~1
+   	uint32_t  size;             			// 2 3 4 5
+   	uint16_t  reserved1;							// 6 7
+	uint16_t  reserved2;							// 8 9 
+   	uint32_t  offset;           					// 10 11 12 13 
+    uint32_t  header_size;      			// 14 15 16 17 
+   	int32_t   width;					// 18 19 20 21	
+	int32_t   height;           		// 22 23 24 25
+   	uint16_t  planes;      								// 26 27
+   	uint16_t  bits;        								// 28 29
+   	uint32_t  compression;      					// 30 31 32 33 
+   	uint32_t  imagesize;        					// 34 35 36 37 
+   	int32_t   xresolution;					// 38 39 40 41
+	int32_t   yresolution;     				// 42 43 44 45
+   	uint32_t  ncolours;         					// 46 47 48 49
+   	uint32_t  importantcolours; 					// 50 51 52 53 
+} BITMAP;
+
+*/
+
+void  MakeBMP( uint8_t* buf, BITMAP* pbmpinfo, uint8_t* imagedata, uint16_t imagesize)
+{
+	uint8_t* pPos;
+	if( buf == NULL ) return;
+	if( pbmpinfo == NULL ) return;
+	if( imagedata == NULL ) return;
+
+	pPos = buf;
+	
+	memcpy( pPos,(const void*)&pbmpinfo->type,2);
+	pPos +=2;
+	memcpy( pPos,(const void*)&pbmpinfo->size,4);
+	pPos +=4;
+	pPos +=2;	// reserved1
+	pPos +=2;	// reserved2
+	memcpy( pPos,(const void*)&pbmpinfo->offset,4);
+	pPos +=4;
+	pPos +=4;	// header_size
+	memcpy(pPos,(const void*)&pbmpinfo->width,4);
+	pPos +=4;
+	memcpy( pPos,(const void*)&pbmpinfo->height,4);
+	pPos +=4;
+	pPos +=2;	// planes
+	memcpy( pPos,(const void*)&pbmpinfo->bits,2);
+
+	pPos = buf +=pbmpinfo->offset;
+	memcpy(pPos,imagedata,imagesize);	
+	
+	
+	
+}
 // mirika 
 void LCD_Init(void)
 {
@@ -87,6 +211,28 @@ void LCD_Init(void)
     lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"    Shibuya", LEFT_MODE);
     lcd.DisplayStringAt(0, LINE(6), (uint8_t *)"Proceeded By:", LEFT_MODE);
     lcd.DisplayStringAt(0, LINE(7), (uint8_t *)"    Tanaka, Jiro", LEFT_MODE);
+
+	int nDataSize=sizeof(_acUnitag_QRCode);
+
+	memset((void*)&bitMap,0,sizeof(bitMap));
+	bitMap.height = BMP_SIZE_X;
+	bitMap.width= BMP_SIZE_Y;
+	bitMap.bits = BMP_PER_PIXEL;
+	bitMap.imagesize = nDataSize;
+	int nHeaderSize=sizeof(bitMap);
+
+	bitMap.offset = nHeaderSize;
+	
+	printf("BMPDataSize=%d\n",nHeaderSize+nDataSize);
+	uint8_t* pData=&BMP_DATA[0];
+	
+	memset(BMP_DATA,0,sizeof(BMP_DATA));
+
+	MakeBMP( (uint8_t*)&BMP_DATA,&bitMap,(uint8_t*)_acUnitag_QRCode,nDataSize);
+	lcd.DrawBitmap(70,190,&BMP_DATA[0]);
+
+
+	
 }
 
 void pattern_updated(const char *)
